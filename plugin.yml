@@ -1,0 +1,7 @@
+main: eu.j3t.gps.GPSPlugin
+name: GPS
+version: 1.0
+author: Jerome Lebel
+commands:
+  gps:
+    description: test
