@@ -6,11 +6,11 @@ The algorithm take care of ladders, avoid lava and water. The distance jump limi
 
 ## Commands
 
-/gps <distance>
+/gps &lt;distance&gt;
 
 The plugin will add the distance to the current player (in x or z axes according to player direction), and the path will be computed to reach that block.
 
-/gps <nickname>
+/gps &lt;nickname&gt;
 
 The gps will compute the path to go a player.
 
