@@ -20,7 +20,7 @@ public class GPSSearch {
     private Location fromLocation;
     private Location toLocation;
     private boolean logging;
-    private GPSNode fromNode;
+    private GPSMapNode fromNode;
     
     protected static boolean canWalkOnBlock(Location location)
     {
@@ -63,9 +63,9 @@ public class GPSSearch {
     
     public List<Location> search()
     {
-        GPSNode node = null;
+        GPSMapNode node = null;
         GPSMap map = new GPSMap(this.toLocation.getWorld());
-        PriorityQueue<GPSNode> queue = new PriorityQueue<GPSNode>();
+        PriorityQueue<GPSMapNode> queue = new PriorityQueue<GPSMapNode>();
         
         if (this.toLocation.getWorld() != this.fromLocation.getWorld() || !GPSSearch.canWalkOnBlock(this.toLocation) || !GPSSearch.canWalkOnBlock(this.fromLocation)) {
             Bukkit.getServer().getLogger().info("from: " + this.fromLocation.toString());
@@ -80,7 +80,7 @@ public class GPSSearch {
         while (queue.size() > 0 && this.fromNode == null) {
             node = queue.poll();
             
-            for (GPSNode nextNode : map.childNodes(node)) {
+            for (GPSMapNode nextNode : map.childNodes(node)) {
                 if (nextNode.getWeight() == Double.MAX_VALUE) {
                     double fromDistance = map.distanceNodeFromLocation(nextNode, this.fromLocation);
                     
@@ -101,7 +101,7 @@ public class GPSSearch {
         }
         if (this.fromNode != null) {
             LinkedList<Location> result = new LinkedList<Location>();
-            GPSNode currentNode = this.fromNode;
+            GPSMapNode currentNode = this.fromNode;
             while (currentNode != null) {
                 Location location = map.getLocation(currentNode);
                 

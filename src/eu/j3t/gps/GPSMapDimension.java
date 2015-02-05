@@ -59,12 +59,12 @@ public class GPSMapDimension implements GPSMapElement {
         this.addElement(element, position, 2);
     }
 
-    private GPSNode getElement(int[] position, int dimension)
+    private GPSMapNode getElement(int[] position, int dimension)
     {
         if (this.elements == null || position[dimension] < offset || position[dimension] >= offset + this.elements.length) {
             return null;
         } else if (dimension == 0) {
-            return (GPSNode)this.elements[position[dimension] - offset];
+            return (GPSMapNode)this.elements[position[dimension] - offset];
         } else if (this.elements[position[dimension] - offset] == null) {
             return null;
         } else {
@@ -72,7 +72,7 @@ public class GPSMapDimension implements GPSMapElement {
         }
     }
 
-    protected GPSNode getElement(int[] position)
+    protected GPSMapNode getElement(int[] position)
     {
         assert position.length == 3;
         return this.getElement(position, 2);

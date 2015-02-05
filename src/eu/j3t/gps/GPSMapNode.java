@@ -12,14 +12,14 @@ import java.util.List;
  * 
  */
 
-public class GPSNode implements GPSMapElement, Comparable<GPSNode> {
+public class GPSMapNode implements GPSMapElement, Comparable<GPSMapNode> {
     private int x, y, z;
     private double originDistance;
     private double weight;
-    private GPSNode parent;
-    private List<GPSNode> nextNodes;
+    private GPSMapNode parent;
+    private List<GPSMapNode> nextNodes;
     
-    protected GPSNode(GPSNode newParent, int newX, int newY, int newZ)
+    protected GPSMapNode(GPSMapNode newParent, int newX, int newY, int newZ)
     {
         this.x = newX;
         this.y = newY;
@@ -48,7 +48,7 @@ public class GPSNode implements GPSMapElement, Comparable<GPSNode> {
         return this.z;
     }
     
-    protected GPSNode getParent()
+    protected GPSMapNode getParent()
     {
         return this.parent;
     }
@@ -73,12 +73,12 @@ public class GPSNode implements GPSMapElement, Comparable<GPSNode> {
         this.originDistance = newDistance;
     }
     
-    protected List<GPSNode> getNextNodes()
+    protected List<GPSMapNode> getNextNodes()
     {
         return nextNodes;
     }
     
-    protected void setNextNodes(List<GPSNode> nodes)
+    protected void setNextNodes(List<GPSMapNode> nodes)
     {
         this.nextNodes = nodes;
     }
@@ -117,7 +117,7 @@ public class GPSNode implements GPSMapElement, Comparable<GPSNode> {
     }
     
     @Override
-    public int compareTo(GPSNode other)
+    public int compareTo(GPSMapNode other)
     {
         double difference = this.getOriginDistance() + this.getWeight() - (other.getOriginDistance() + other.getWeight());
         

@@ -90,22 +90,22 @@ public class GPSMap {
         this.dimension = new GPSMapDimension();
     }
     
-    protected GPSNode getNode(int x, int y, int z)
+    protected GPSMapNode getNode(int x, int y, int z)
     {
         int[] position = { x, y, z };
         
         return this.dimension.getElement(position);
     }
     
-    protected GPSNode getOrCreateNode(GPSNode parent, int x, int y, int z)
+    protected GPSMapNode getOrCreateNode(GPSMapNode parent, int x, int y, int z)
     {
-        GPSNode result;
+        GPSMapNode result;
         
         result = this.getNode(x, y, z);
         if (result == null) {
             int[] position = { x, y, z };
             
-            result = new GPSNode(parent, x, y, z);
+            result = new GPSMapNode(parent, x, y, z);
             this.dimension.addElement(result, position);
         }
         return result;
@@ -118,9 +118,9 @@ public class GPSMap {
      *      <x> <y - 2> <z> position (this is tested only if <testFallAndJump> is true)
      *      <x> <y + 1> <z> position (this is tested only if (<testFallAndJump> && <canJump>) is true)
      */
-    private boolean addGPSNode(GPSNode parent, boolean canJump, int x, int y, int z, List<GPSNode> list, boolean testFallAndJump)
+    private boolean addGPSNode(GPSMapNode parent, boolean canJump, int x, int y, int z, List<GPSMapNode> list, boolean testFallAndJump)
     {
-        GPSNode newNode = null;
+        GPSMapNode newNode = null;
         
         newNode = this.getNode(x, y, z);
         if (newNode == null) {
@@ -166,13 +166,13 @@ public class GPSMap {
      *  Let's all blocks around the current position (with going up, going down,
      *  jumping one block, jumping 2 blocks)
      */
-    protected List<GPSNode> childNodes(GPSNode node)
+    protected List<GPSMapNode> childNodes(GPSMapNode node)
     {
-        List<GPSNode> nodes;
+        List<GPSMapNode> nodes;
         
         nodes = node.getNextNodes();
         if (nodes == null) {
-            nodes = new LinkedList<GPSNode>();
+            nodes = new LinkedList<GPSMapNode>();
             int x = node.getX();
             int y = node.getY();
             int z = node.getZ();
@@ -243,7 +243,7 @@ public class GPSMap {
     /*
      * compute a distance between <node1> and <node2>
      */
-    protected double distanceNode(GPSNode node1, GPSNode node2)
+    protected double distanceNode(GPSMapNode node1, GPSMapNode node2)
     {
         int xDifference = node1.getX() - node2.getX();
         int yDifference = node1.getY() - node2.getY();
@@ -255,7 +255,7 @@ public class GPSMap {
     /*
      * compute a distance between <node> and <location>
      */
-    protected double distanceNodeFromLocation(GPSNode node, Location location)
+    protected double distanceNodeFromLocation(GPSMapNode node, Location location)
     {
         int xDifference = node.getX() - location.getBlockX();
         int yDifference = node.getY() - location.getBlockY();
@@ -264,7 +264,7 @@ public class GPSMap {
         return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
     }
 
-    protected Location getLocation(GPSNode node)
+    protected Location getLocation(GPSMapNode node)
     {
         return new Location(this.world, node.getX() + 0.5, node.getY(), node.getZ() + 0.5);
     }
