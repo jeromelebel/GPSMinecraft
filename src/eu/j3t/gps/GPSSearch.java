@@ -19,7 +19,7 @@ import org.bukkit.Material;
 public class GPSSearch {
     private Location fromLocation;
     private Location toLocation;
-    private boolean logging;
+    private boolean debugLog;
     private GPSMapNode fromNode;
     
     protected static boolean canWalkOnBlock(Location location)
@@ -36,7 +36,7 @@ public class GPSSearch {
     
     public GPSSearch(boolean newLogging)
     {
-        this.logging = newLogging;
+        this.debugLog = newLogging;
     }
     
     public void setFrom(Location newFrom)
@@ -85,7 +85,7 @@ public class GPSSearch {
                     double fromDistance = map.distanceNodeFromLocation(nextNode, this.fromLocation);
                     
                     nextNode.setWeight(fromDistance);
-                    if (logging) {
+                    if (debugLog) {
                         Bukkit.getServer().getLogger().info("add node: " + nextNode.toString());
                     }
                     queue.offer(nextNode);
