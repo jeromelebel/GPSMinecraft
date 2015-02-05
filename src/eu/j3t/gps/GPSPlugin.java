@@ -16,7 +16,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class GPSPlugin extends JavaPlugin implements Listener {
         
     /* Hash to store the path for each player */
-    private HashMap<UUID, GPSSearchPathInfo> playerPaths; 
+    private HashMap<UUID, GPSSearchPathInfo> playerPaths;
+    private boolean debugLog;
     
     @Override
     public void onEnable()
@@ -34,11 +35,12 @@ public class GPSPlugin extends JavaPlugin implements Listener {
         if (commandString.equals("gps")) {
             if (sender instanceof Player) {
                 Player player = (Player)sender;
-                GPSSearch search = new GPSSearch();
-                Player playerTarget = null;
                 GPSSearchPathInfo pathInfo = this.playerPaths.get(player.getUniqueId());
                 
-                if (args.length == 1 && args[0].equals("debug")) {
+                if (args.length == 1 && args[0].equals("debuglog")) {
+                    this.debugLog = !this.debugLog;
+                    player.sendMessage("log debug : " + this.debugLog);
+                } else if (args.length == 1 && args[0].equals("debug")) {
                     if (pathInfo != null) {
                         pathInfo.setSnowDebug(!pathInfo.snowDebug());
                         player.sendMessage("debug : " + pathInfo.snowDebug());
@@ -47,6 +49,9 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                         player.sendMessage("pas de gps en cours");
                     }
                 } else {
+                    Player playerTarget = null;
+                    GPSSearch search = new GPSSearch(this.debugLog);
+                    
                     if (pathInfo == null) {
                         pathInfo = new GPSSearchPathInfo();
                         pathInfo.setPreviousCompassTarget(player.getCompassTarget());
