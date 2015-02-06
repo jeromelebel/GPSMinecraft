@@ -60,7 +60,7 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                         pathInfo.setPlayerUUIDTarget(null);
                         pathInfo.setLocationTarget(null);
                     }
-                    search.setTo(player.getLocation());
+                    search.setFrom(player.getLocation());
                     
                     if (args.length >= 1) {
                         playerTarget = Bukkit.getServer().getPlayer(args[0]);
@@ -89,11 +89,11 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                             locationTarget.add(0, 0, distance);
                         }
                         pathInfo.setLocationTarget(locationTarget);
-                        search.setFrom(locationTarget);
+                        search.setTo(locationTarget);
                         this.getLogger().info("gps to " + pathInfo.locationTarget().toString());
                     } else {
                         pathInfo.setPlayerUUIDTarget(playerTarget.getUniqueId());
-                        search.setFrom(playerTarget.getLocation());
+                        search.setTo(playerTarget.getLocation());
                         this.getLogger().info("gps to " + playerTarget.getName());
                     }
                     
@@ -102,7 +102,7 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                         player.sendMessage("Pas de chemin");
                     } else {
                         this.playerPaths.put(player.getUniqueId(), pathInfo);
-                        player.sendMessage("C'est parti, distance : " + pathInfo.path().size());
+                        player.sendMessage("C'est parti, distance : " + (int)search.getPathDistance());
                         this.updateCompassForPlayer(player);
                     }
                 }
@@ -137,9 +137,9 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                 }
                 /* if the player when walked 20 blocks, let's recompute the path, case the player target moved */
                 if (pathInfo.stepRemoved() >= 20) {
-                    this.recomputePathForPlayer(player, pathInfo);
+                    double pathDistance = this.recomputePathForPlayer(player, pathInfo);
                     if (pathInfo.path() != null) {
-                        player.sendMessage("Distance : " + pathInfo.path().size());
+                        player.sendMessage("Distance : " + (int)pathDistance);
                     }
                 }
             }
@@ -157,24 +157,27 @@ public class GPSPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void recomputePathForPlayer(Player player, GPSSearchPathInfo pathInfo)
+    private double recomputePathForPlayer(Player player, GPSSearchPathInfo pathInfo)
     {
         GPSSearch search = new GPSSearch();
         Player playerTarget = Bukkit.getPlayer(pathInfo.playerUUIDTarget());
+        double pathDistance = 0;
         
         /* recompute the path */
         if (playerTarget != null) {
-            search.setTo(player.getLocation());
-            search.setFrom(playerTarget.getLocation());
+            search.setFrom(player.getLocation());
+            search.setTo(playerTarget.getLocation());
             pathInfo.setPath(search.search());
+            pathDistance = search.getPathDistance();
             Bukkit.getServer().getLogger().info("recompute " + playerTarget.toString());
             if (pathInfo.path() == null) {
                 player.sendMessage("Il n'y a pas de chemin");
             }
         } else if (pathInfo.playerUUIDTarget() == null) {
-            search.setTo(player.getLocation());
-            search.setFrom(pathInfo.locationTarget());
+            search.setFrom(player.getLocation());
+            search.setTo(pathInfo.locationTarget());
             pathInfo.setPath(search.search());
+            pathDistance = search.getPathDistance();
             Bukkit.getServer().getLogger().info("recompute " + pathInfo.locationTarget().toString());
             if (pathInfo.path() == null) {
                 player.sendMessage("Il n'y a pas de chemin");
@@ -183,6 +186,7 @@ public class GPSPlugin extends JavaPlugin implements Listener {
             player.sendMessage("Joueur inconnu");
             pathInfo.setPath(null);
         }
+        return pathDistance;
     }
 
     @EventHandler

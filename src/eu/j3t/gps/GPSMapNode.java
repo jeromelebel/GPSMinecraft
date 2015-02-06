@@ -29,7 +29,7 @@ public class GPSMapNode implements GPSMapElement, Comparable<GPSMapNode> {
         if (this.parent == null) {
             this.originDistance = 0;
         } else {
-            this.originDistance = this.parent.getOriginDistance() + 1;
+            this.originDistance = newParent.getOriginDistance() + GPSMap.distanceNodeFromPosition(this.parent, this.x, this.y, this.z);
         }
     }
     

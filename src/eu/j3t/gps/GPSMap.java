@@ -3,6 +3,7 @@ package eu.j3t.gps;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -10,8 +11,9 @@ import org.bukkit.World;
 public class GPSMap {
     private GPSMapDimension dimension;
     private World world;
+    private boolean debugLog;
     
-    protected static boolean canWalkThru(World world, int x, int y, int z)
+    protected static boolean canPassThru(World world, int x, int y, int z)
     {
         Location above = new Location(world, x + 0.5, y, z + 0.5);
         
@@ -84,10 +86,20 @@ public class GPSMap {
                 || (m0 == Material.LADDER && canWalkByM1 && canWalkByM2);
     }
     
-    protected GPSMap(World newWorld)
+    protected static boolean canWalkOn(World world, int x, int y, int z)
+    {
+        Material m0 = new Location(world, x, y - 1, z).getBlock().getType();
+        Material m1 = new Location(world, x, y, z).getBlock().getType();
+        Material m2 = new Location(world, x, y + 2, z).getBlock().getType();
+        
+        return canWalkOn(m0, m1, m2);
+    }
+    
+    protected GPSMap(World newWorld, boolean newLoggin)
     {
         this.world = newWorld;
         this.dimension = new GPSMapDimension();
+        this.debugLog = newLoggin;
     }
     
     protected GPSMapNode getNode(int x, int y, int z)
@@ -115,46 +127,98 @@ public class GPSMap {
      * This test if we can be at:
      *      <x> <y> <z> position
      *      <x> <y - 1> <z> position (this is tested only if <testFallAndJump> is true)
-     *      <x> <y - 2> <z> position (this is tested only if <testFallAndJump> is true)
-     *      <x> <y + 1> <z> position (this is tested only if (<testFallAndJump> && <canJump>) is true)
+     *      <x> <y + 1> <z> position (this is tested only if <testFallAndJump> is true)
+     *      <x> <y + 2> <z> position (this is tested only if (<testFallAndJump> && <canJump>) is true)
+     *      
+     * We are going backward, and we want to test if we arrive from a block at the same level,
+     * one below (this mean jumping) or if we can arrive one or two blocks above (this mean falling down)
      */
-    private boolean addGPSNode(GPSMapNode parent, boolean canJump, int x, int y, int z, List<GPSMapNode> list, boolean testFallAndJump)
+    private boolean addGPSNode(GPSMapNode parent, int x, int y, int z, int freeBlockAboveCount, List<GPSMapNode> list)
     {
         GPSMapNode newNode = null;
         
-        newNode = this.getNode(x, y, z);
-        if (newNode == null) {
-            Material[] materials = {
-                    new Location(this.world, x + 0.5, y - 3, z + 0.5).getBlock().getType(),
-                    new Location(this.world, x + 0.5, y - 2, z + 0.5).getBlock().getType(),
-                    new Location(this.world, x + 0.5, y - 1, z + 0.5).getBlock().getType(),
-                    new Location(this.world, x + 0.5, y, z + 0.5).getBlock().getType(),
-                    new Location(this.world, x + 0.5, y + 1, z + 0.5).getBlock().getType(),
-                    new Location(this.world, x + 0.5, y + 2, z + 0.5).getBlock().getType()
-            };
-            
-            if (GPSMap.canWalkOn(materials[2], materials[3], materials[4])) {
-                newNode = this.getOrCreateNode(parent, x, y, z);
-            } else if (testFallAndJump
-                    && GPSMap.canWalkOn(materials[1], materials[2], materials[3])
-                    && GPSMap.canPassThru(materials[4])) {
-                newNode = this.getOrCreateNode(parent, x, y - 1, z);
-            } else if (testFallAndJump
-                    && GPSMap.canWalkOn(materials[0], materials[1], materials[2])
-                    && GPSMap.canPassThru(materials[3])
-                    && GPSMap.canPassThru(materials[4])) {
-                newNode = this.getOrCreateNode(parent, x, y - 2, z);
-            } else if (testFallAndJump
-                    && canJump
-                    && GPSMap.canWalkOn(materials[3], materials[4], materials[5])) {
-                newNode = this.getOrCreateNode(parent, x, y + 1, z);
+        Material[] materials = {
+                new Location(this.world, x + 0.5, y - 2, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y - 1, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y + 1, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y + 2, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y + 3, z + 0.5).getBlock().getType(),
+                new Location(this.world, x + 0.5, y + 4, z + 0.5).getBlock().getType()
+        };
+        
+        if (this.debugLog) {
+            Bukkit.getServer().getLogger().info("test x: " + x + " y: " + y + " z: " + z);
+        }
+        if (GPSMap.canWalkOn(materials[1], materials[2], materials[3])) {
+            // same level
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("    ok for y: " + y);
             }
+            newNode = this.getOrCreateNode(parent, x, y, z);
+        } else if (GPSMap.canWalkOn(materials[0], materials[1], materials[2])
+                && GPSMap.canPassThru(materials[3])) {
+            // jumping one block
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("    ok for y: " + (y - 1));
+            }
+            newNode = this.getOrCreateNode(parent, x, y - 1, z);
+        } else if (freeBlockAboveCount >= 1
+                && GPSMap.canWalkOn(materials[2], materials[3], materials[4])) {
+            // can fall down one block
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("    ok for y: " + (y + 1));
+            }
+            newNode = this.getOrCreateNode(parent, x, y + 1, z);
+        } else if (freeBlockAboveCount >= 2
+                && GPSMap.canWalkOn(materials[3], materials[4], materials[5])) {
+            // can fall down 2 blocks
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("    ok for y: " + (y + 2));
+            }
+            newNode = this.getOrCreateNode(parent, x, y + 2, z);
         }
         if (newNode != null) {
             list.add(newNode);
             return true;
         } else {
             return false;
+        }
+    }
+    
+    /*
+     * Count the number of block that the player can pass thru, above its head
+     * return 0, 1 or 2, not more
+     */
+    protected int countPassThruBlockAboveHead(int x, int y, int z)
+    {
+        int result = 0;
+        
+        if (canPassThru(this.world, x, y + 2, z)) {
+            result = 1;
+            if (canPassThru(this.world, x, y + 3, z)) {
+                result = 2;
+            }
+        }
+        return result;
+    }
+    
+    protected void tryNextBlockInDirection(GPSMapNode node, int x, int y, int z, int freeBlockAboveCount, int xDirection, int zDirection, List<GPSMapNode> childNodes)
+    {
+        if (this.addGPSNode(node, x + xDirection, y, z + zDirection, freeBlockAboveCount, childNodes)) {
+            // we can arrive from the next block
+        } else if (canPassThru(this.world, x + xDirection, y, z + zDirection)
+                    && canPassThru(this.world, x + xDirection, y + 1, z + zDirection)) {
+            // if we can't arrive from the next block, maybe we can arrive from one block away
+            freeBlockAboveCount = Math.min(freeBlockAboveCount, this.countPassThruBlockAboveHead(x + xDirection, y, z + zDirection));
+            if (this.addGPSNode(node, x + xDirection * 2, y, z + zDirection * 2, freeBlockAboveCount, childNodes)) {
+                // so we can arrive from 2 blocks away
+            } else if (canPassThru(this.world, x + xDirection * 2, y, z + zDirection * 2)
+                        && canPassThru(this.world, x + xDirection * 2, y + 1, z + zDirection * 2)) {
+                // if we can't arrive from 2 blocks away, let's 3 blocks away
+                freeBlockAboveCount = Math.min(freeBlockAboveCount, this.countPassThruBlockAboveHead(x + xDirection * 2, y, z + zDirection * 2));
+                this.addGPSNode(node, x + xDirection * 3, y, z + zDirection * 3, freeBlockAboveCount, childNodes);
+            }
         }
     }
     
@@ -168,82 +232,51 @@ public class GPSMap {
      */
     protected List<GPSMapNode> childNodes(GPSMapNode node)
     {
-        List<GPSMapNode> nodes;
+        List<GPSMapNode> childNodes;
         
-        nodes = node.getNextNodes();
-        if (nodes == null) {
-            nodes = new LinkedList<GPSMapNode>();
+        childNodes = node.getNextNodes();
+        if (childNodes == null) {
+            childNodes = new LinkedList<GPSMapNode>();
             int x = node.getX();
             int y = node.getY();
             int z = node.getZ();
-            boolean canJump = canWalkThru(this.world, x, y + 2, z);
+            int passThruBlockAboveHeadCount = this.countPassThruBlockAboveHead(x, y, z);
             
-            /* let's try to be on x + 1 */
-            if (!this.addGPSNode(node, canJump, x + 1, y, z, nodes, true)
-                    && canWalkThru(this.world, x + 1, y, z)
-                    && canWalkThru(this.world, x + 1, y + 1, z)
-                    && canWalkThru(this.world, x + 1, y + 2, z)) {
-                /* it was not possible, but at least, we could jump to reach x + 2 */
-                /* let's try if we can be on x + 2 */
-                if (!this.addGPSNode(node, canJump, x + 2, y, z, nodes, true)
-                        && canWalkThru(this.world, x + 2, y, z)
-                        && canWalkThru(this.world, x + 2, y + 1, z)
-                        && canWalkThru(this.world, x + 2, y + 2, z)) {
-                    /* it was not possible, but at least, we could jump to reach x + 3 */
-                    /*let's try if we can be on x + 3 */
-                    this.addGPSNode(node, canJump, x + 3, y, z, nodes, true);                    
-                }
-            }
-            /* we try now with x - 1, y + 1 and y - 1, the same way */
-            if (!this.addGPSNode(node, canJump, x - 1, y, z, nodes, true)
-                    && canWalkThru(this.world, x - 1, y, z)
-                    && canWalkThru(this.world, x - 1, y + 1, z)
-                    && canWalkThru(this.world, x - 1, y + 2, z)) {
-                if (!this.addGPSNode(node, canJump, x - 2, y, z, nodes, true)
-                        && canWalkThru(this.world, x - 2, y, z)
-                        && canWalkThru(this.world, x - 2, y + 1, z)
-                        && canWalkThru(this.world, x - 2, y + 2, z)) {
-                    this.addGPSNode(node, canJump, x - 3, y, z, nodes, true);                
-                }
-            }
-            if (!this.addGPSNode(node, canJump, x, y, z + 1, nodes, true)
-                    && canWalkThru(this.world, x, y, z + 1)
-                    && canWalkThru(this.world, x, y + 1, z + 1)
-                    && canWalkThru(this.world, x, y + 2, z + 1)) {
-                if (!this.addGPSNode(node, canJump, x, y, z + 2, nodes, true)
-                        && canWalkThru(this.world, x, y, z + 2)
-                        && canWalkThru(this.world, x, y + 1, z + 2)
-                        && canWalkThru(this.world, x, y + 2, z + 2)) {
-                    this.addGPSNode(node, canJump, x, y, z + 3, nodes, true);                
-                }
-            }
-            if (!this.addGPSNode(node, canJump, x, y, z - 1, nodes, true)
-                    && canWalkThru(this.world, x, y, z - 1)
-                    && canWalkThru(this.world, x, y + 1, z - 1)
-                    && canWalkThru(this.world, x, y + 2, z - 1)) {
-                if (!this.addGPSNode(node, canJump, x, y, z - 2, nodes, true)
-                        && canWalkThru(this.world, x, y, z - 2)
-                        && canWalkThru(this.world, x, y + 1, z - 2)
-                        && canWalkThru(this.world, x, y + 2, z - 2)) {
-                    this.addGPSNode(node, canJump, x, y, z - 3, nodes, true);                
-                }
-            }
+            // let's try horizontally on all fourth direction
+            this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, 1, 0, childNodes);
+            this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, -1, 0, childNodes);
+            this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, 0, 1, childNodes);
+            this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, 0, -1, childNodes);
             
-            /* test if we can down or go up (with a ladder) */
-            if (!this.addGPSNode(node, false, x, y - 1, z, nodes, false)) {
-                this.addGPSNode(node, canJump, x, y - 2, z, nodes, false);                
+            // let's try up and down.
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("test verical");
             }
-            this.addGPSNode(node, false, x, y + 1, z, nodes, false);
-            
-            node.setNextNodes(nodes);
+            if (canWalkOn(this.world, x, y - 1, z)) {
+                // this means we can climb up a ladder to arrive to node 
+                childNodes.add(this.getOrCreateNode(node, x, y - 1, z));
+                if (this.debugLog) {
+                    Bukkit.getServer().getLogger().info("    ok for y: " + (y - 1));
+                }
+            }
+            if (canWalkOn(this.world, x, y + 1, z)) {
+                // we can fall down one block from a ladder to arrive to node 
+                childNodes.add(this.getOrCreateNode(node, x, y + 1, z));
+            } else if (canWalkOn(this.world, x, y + 2, z)) {
+                // we can fall down two blocks from a ladder to arrive to node 
+                childNodes.add(this.getOrCreateNode(node, x, y + 2, z));
+            }
+            node.setNextNodes(childNodes);
+        } else if (this.debugLog) {
+            Bukkit.getServer().getLogger().info("already computed for x: " + node.getX() + " y: " + node.getY() + " z: " + node.getZ() + " children: " + childNodes.size());
         }
-        return nodes;
+        return childNodes;
     }
     
     /*
      * compute a distance between <node1> and <node2>
      */
-    protected double distanceNode(GPSMapNode node1, GPSMapNode node2)
+    static protected double distanceNode(GPSMapNode node1, GPSMapNode node2)
     {
         int xDifference = node1.getX() - node2.getX();
         int yDifference = node1.getY() - node2.getY();
@@ -255,11 +288,20 @@ public class GPSMap {
     /*
      * compute a distance between <node> and <location>
      */
-    protected double distanceNodeFromLocation(GPSMapNode node, Location location)
+    static protected double distanceNodeFromLocation(GPSMapNode node, Location location)
     {
         int xDifference = node.getX() - location.getBlockX();
         int yDifference = node.getY() - location.getBlockY();
         int zDifference = node.getZ() - location.getBlockZ();
+        
+        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
+    }
+    
+    static protected double distanceNodeFromPosition(GPSMapNode node, int x, int y, int z)
+    {
+        int xDifference = node.getX() - x;
+        int yDifference = node.getY() - y;
+        int zDifference = node.getZ() - z;
         
         return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
     }

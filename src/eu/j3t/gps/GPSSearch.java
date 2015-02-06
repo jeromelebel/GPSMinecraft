@@ -17,10 +17,10 @@ import org.bukkit.Material;
  */
 
 public class GPSSearch {
-    private Location fromLocation;
-    private Location toLocation;
+    private Location startLocation;
+    private Location destinationLocation;
     private boolean debugLog;
-    private GPSMapNode fromNode;
+    private GPSMapNode destinationNode;
     
     protected static boolean canWalkOnBlock(Location location)
     {
@@ -41,56 +41,59 @@ public class GPSSearch {
     
     public void setFrom(Location newFrom)
     {
-        this.fromLocation = newFrom.getBlock().getLocation().clone();
-        if (this.fromLocation.getBlock().getType() == Material.AIR) {
-            while (this.fromLocation.getBlock().getType() == Material.AIR) {
-                this.fromLocation.add(0, -1, 0);
+        this.startLocation = newFrom.getBlock().getLocation().clone();
+        if (this.startLocation.getBlock().getType() == Material.AIR) {
+            while (this.startLocation.getBlock().getType() == Material.AIR) {
+                this.startLocation.add(0, -1, 0);
             }
-            this.fromLocation.add(0, 1, 0);
+            this.startLocation.add(0, 1, 0);
         }
     }
     
     public void setTo(Location newTo)
     {
-        this.toLocation = newTo.getBlock().getLocation().clone();
-        if (this.toLocation.getBlock().getType() == Material.AIR) {
-            while (this.toLocation.getBlock().getType() == Material.AIR) {
-                this.toLocation.add(0, -1, 0);
+        this.destinationLocation = newTo.getBlock().getLocation().clone();
+        if (this.destinationLocation.getBlock().getType() == Material.AIR) {
+            while (this.destinationLocation.getBlock().getType() == Material.AIR) {
+                this.destinationLocation.add(0, -1, 0);
             }
-            this.toLocation.add(0, 1, 0);
+            this.destinationLocation.add(0, 1, 0);
         }
     }
     
     public List<Location> search()
     {
         GPSMapNode node = null;
-        GPSMap map = new GPSMap(this.toLocation.getWorld());
+        GPSMap map = new GPSMap(this.destinationLocation.getWorld(), this.debugLog);
         PriorityQueue<GPSMapNode> queue = new PriorityQueue<GPSMapNode>();
         
-        if (this.toLocation.getWorld() != this.fromLocation.getWorld() || !GPSSearch.canWalkOnBlock(this.toLocation) || !GPSSearch.canWalkOnBlock(this.fromLocation)) {
-            Bukkit.getServer().getLogger().info("from: " + this.fromLocation.toString());
-            Bukkit.getServer().getLogger().info("to: " + this.toLocation.toString());
+        if (this.destinationLocation.getWorld() != this.startLocation.getWorld() || !GPSSearch.canWalkOnBlock(this.destinationLocation) || !GPSSearch.canWalkOnBlock(this.startLocation)) {
+            Bukkit.getServer().getLogger().info("from: " + this.startLocation.toString());
+            Bukkit.getServer().getLogger().info("to: " + this.destinationLocation.toString());
             Bukkit.getServer().getLogger().info("impossible");
             return null;
         }
         
-        node = map.getOrCreateNode(null, this.toLocation.getBlockX(), this.toLocation.getBlockY(), this.toLocation.getBlockZ());
-        node.setWeight(this.fromLocation.distance(this.fromLocation));
+        node = map.getOrCreateNode(null, this.destinationLocation.getBlockX(), this.destinationLocation.getBlockY(), this.destinationLocation.getBlockZ());
+        node.setWeight(this.startLocation.distance(this.destinationLocation));
         queue.add(node);
-        while (queue.size() > 0 && this.fromNode == null) {
+        while (queue.size() > 0 && this.destinationNode == null) {
             node = queue.poll();
             
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("unqueue node: " + node.toString());
+            }
             for (GPSMapNode nextNode : map.childNodes(node)) {
                 if (nextNode.getWeight() == Double.MAX_VALUE) {
-                    double fromDistance = map.distanceNodeFromLocation(nextNode, this.fromLocation);
+                    double startDistance = GPSMap.distanceNodeFromLocation(nextNode, this.startLocation);
                     
-                    nextNode.setWeight(fromDistance);
-                    if (debugLog) {
-                        Bukkit.getServer().getLogger().info("add node: " + nextNode.toString());
+                    nextNode.setWeight(startDistance);
+                    if (this.debugLog) {
+                        Bukkit.getServer().getLogger().info("queue node: " + nextNode.toString());
                     }
                     queue.offer(nextNode);
-                    if (fromDistance < 1.0) {
-                        this.fromNode = nextNode;
+                    if (startDistance < 1.0) {
+                        this.destinationNode = nextNode;
                     }
                 }
             }
@@ -99,17 +102,29 @@ public class GPSSearch {
                 return null;
             }
         }
-        if (this.fromNode != null) {
+        if (this.destinationNode != null) {
             LinkedList<Location> result = new LinkedList<Location>();
-            GPSMapNode currentNode = this.fromNode;
+            GPSMapNode currentNode = this.destinationNode;
             while (currentNode != null) {
                 Location location = map.getLocation(currentNode);
                 
-                result.push(location);
+                result.addLast(location);
                 currentNode = currentNode.getParent();
+            }
+            if (this.debugLog) {
+                Bukkit.getServer().getLogger().info("result array:");
+                for (Location location : result) {
+                    Bukkit.getServer().getLogger().info("    " + location.toString());
+                }
+                Bukkit.getServer().getLogger().info("distance " + this.destinationNode.getOriginDistance());
             }
             return result;
         }
         return null;
+    }
+    
+    protected double getPathDistance()
+    {
+        return this.destinationNode.getOriginDistance();
     }
 }
