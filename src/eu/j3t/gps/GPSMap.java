@@ -13,6 +13,41 @@ public class GPSMap {
     private World world;
     private boolean debugLog;
     
+    /*
+     * compute a distance between <node1> and <node2>
+     */
+    static protected double distanceNode(GPSMapNode node1, GPSMapNode node2)
+    {
+        int xDifference = node1.getX() - node2.getX();
+        int yDifference = node1.getY() - node2.getY();
+        int zDifference = node1.getZ() - node2.getZ();
+        
+        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
+    }
+
+    /*
+     * compute a distance between <node> and <location>
+     */
+    static protected double distanceNodeFromLocation(GPSMapNode node, Location location)
+    {
+        return distanceNodeFromPosition(node, location.getBlockX(), location.getBlockY(), location.getBlockZ());
+    }
+    
+    /*
+     * compute a distance between <node> and x, y, z
+     */
+    static protected double distanceNodeFromPosition(GPSMapNode node, int x, int y, int z)
+    {
+        int xDifference = node.getX() - x;
+        int yDifference = node.getY() - y;
+        int zDifference = node.getZ() - z;
+        
+        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
+    }
+    
+    /*
+     * return true if the player can go through the material set at this position 
+     */
     protected static boolean canPassThru(World world, int x, int y, int z)
     {
         Location above = new Location(world, x + 0.5, y, z + 0.5);
@@ -20,6 +55,11 @@ public class GPSMap {
         return canPassThru(above.getBlock().getType());
     }
 
+    /*
+     * return true if the player can go through this material
+     * I'm assuming we can open all doors
+     *  
+     */
     @SuppressWarnings("deprecation")
     protected static boolean canPassThru(Material material)
     {
@@ -248,7 +288,7 @@ public class GPSMap {
             this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, 0, 1, childNodes);
             this.tryNextBlockInDirection(node, x, y, z, passThruBlockAboveHeadCount, 0, -1, childNodes);
             
-            // let's try up and down.
+            // let's try to arrive to <node> vertically
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("test verical");
             }
@@ -271,39 +311,6 @@ public class GPSMap {
             Bukkit.getServer().getLogger().info("already computed for x: " + node.getX() + " y: " + node.getY() + " z: " + node.getZ() + " children: " + childNodes.size());
         }
         return childNodes;
-    }
-    
-    /*
-     * compute a distance between <node1> and <node2>
-     */
-    static protected double distanceNode(GPSMapNode node1, GPSMapNode node2)
-    {
-        int xDifference = node1.getX() - node2.getX();
-        int yDifference = node1.getY() - node2.getY();
-        int zDifference = node1.getZ() - node2.getZ();
-        
-        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
-    }
-
-    /*
-     * compute a distance between <node> and <location>
-     */
-    static protected double distanceNodeFromLocation(GPSMapNode node, Location location)
-    {
-        int xDifference = node.getX() - location.getBlockX();
-        int yDifference = node.getY() - location.getBlockY();
-        int zDifference = node.getZ() - location.getBlockZ();
-        
-        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
-    }
-    
-    static protected double distanceNodeFromPosition(GPSMapNode node, int x, int y, int z)
-    {
-        int xDifference = node.getX() - x;
-        int yDifference = node.getY() - y;
-        int zDifference = node.getZ() - z;
-        
-        return Math.sqrt(xDifference * xDifference + yDifference * yDifference + zDifference * zDifference);
     }
 
     protected Location getLocation(GPSMapNode node)

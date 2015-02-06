@@ -20,7 +20,7 @@ public class GPSSearch {
     private Location startLocation;
     private Location destinationLocation;
     private boolean debugLog;
-    private GPSMapNode destinationNode;
+    private GPSMapNode originNode;
     
     protected static boolean canWalkOnBlock(Location location)
     {
@@ -68,6 +68,7 @@ public class GPSSearch {
         PriorityQueue<GPSMapNode> queue = new PriorityQueue<GPSMapNode>();
         
         if (this.destinationLocation.getWorld() != this.startLocation.getWorld() || !GPSSearch.canWalkOnBlock(this.destinationLocation) || !GPSSearch.canWalkOnBlock(this.startLocation)) {
+            // the path is impossible, don't try
             Bukkit.getServer().getLogger().info("from: " + this.startLocation.toString());
             Bukkit.getServer().getLogger().info("to: " + this.destinationLocation.toString());
             Bukkit.getServer().getLogger().info("impossible");
@@ -77,13 +78,14 @@ public class GPSSearch {
         node = map.getOrCreateNode(null, this.destinationLocation.getBlockX(), this.destinationLocation.getBlockY(), this.destinationLocation.getBlockZ());
         node.setWeight(this.startLocation.distance(this.destinationLocation));
         queue.add(node);
-        while (queue.size() > 0 && this.destinationNode == null) {
+        while (queue.size() > 0 && this.originNode == null) {
             node = queue.poll();
             
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("unqueue node: " + node.toString());
             }
             for (GPSMapNode nextNode : map.childNodes(node)) {
+                // if <nextNode> has a weight, this has already been added to queue once
                 if (nextNode.getWeight() == Double.MAX_VALUE) {
                     double startDistance = GPSMap.distanceNodeFromLocation(nextNode, this.startLocation);
                     
@@ -93,22 +95,24 @@ public class GPSSearch {
                     }
                     queue.offer(nextNode);
                     if (startDistance < 1.0) {
-                        this.destinationNode = nextNode;
+                        // we arrived to the start point
+                        this.originNode = nextNode;
                     }
                 }
             }
             if (queue.size() > 1000) {
+                // To much block to process, just give up
                 Bukkit.getServer().getLogger().info("trop");
                 return null;
             }
         }
-        if (this.destinationNode != null) {
+        if (this.originNode != null) {
             LinkedList<Location> result = new LinkedList<Location>();
-            GPSMapNode currentNode = this.destinationNode;
+            GPSMapNode currentNode = this.originNode;
             while (currentNode != null) {
                 Location location = map.getLocation(currentNode);
                 
-                result.addLast(location);
+                result.add(location);
                 currentNode = currentNode.getParent();
             }
             if (this.debugLog) {
@@ -116,7 +120,7 @@ public class GPSSearch {
                 for (Location location : result) {
                     Bukkit.getServer().getLogger().info("    " + location.toString());
                 }
-                Bukkit.getServer().getLogger().info("distance " + this.destinationNode.getOriginDistance());
+                Bukkit.getServer().getLogger().info("distance " + this.originNode.getOriginDistance());
             }
             return result;
         }
@@ -125,6 +129,6 @@ public class GPSSearch {
     
     protected double getPathDistance()
     {
-        return this.destinationNode.getOriginDistance();
+        return this.originNode.getOriginDistance();
     }
 }
