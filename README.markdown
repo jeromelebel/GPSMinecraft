@@ -4,6 +4,10 @@ This project is a test to implement [A* algorithm](http://en.wikipedia.org/wiki/
 
 The algorithm take care of ladders, avoid lava and water. The distance jump limit is 2 blocks (and the algorithm checks if the ceiling is high enough to jump). The fall down limit is 2 blocks down.
 
+## Known Bugs
+
+The path doesn't try to go in diagonal.
+
 ## Commands
 
 /gps &lt;distance&gt;
