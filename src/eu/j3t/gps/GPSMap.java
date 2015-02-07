@@ -164,16 +164,34 @@ public class GPSMap {
     }
     
     /*
-     * This test if we can be at:
+     * This test if the player can be at:
      *      <x> <y> <z> position
-     *      <x> <y - 1> <z> position (this is tested only if <testFallAndJump> is true)
-     *      <x> <y + 1> <z> position (this is tested only if <testFallAndJump> is true)
-     *      <x> <y + 2> <z> position (this is tested only if (<testFallAndJump> && <canJump>) is true)
-     *      
+     *      <x> <y - 1> <z> position
+     *      <x> <y + 1> <z> position
+     *      <x> <y + 2> <z> position
+     * and arrive at <parent>
+     *
      * We are going backward, and we want to test if we arrive from a block at the same level,
      * one below (this mean jumping) or if we can arrive one or two blocks above (this mean falling down)
+     *
+     * IN:
+     * <parentFreeBlockAboveCount> is the number of "pass thru" blocks above the head player at position <parent>
+     *      that can be "pass thru"
+     * <jumpFreeBlockAboveCount> is the number of "pass thru" blocks above the head player while
+     *      jumping between <parent> and <x>, <y>, <z>
+     * <jumpLength> is the number of horizontal blocks to jump to go between <parent> and <x>, <y> and <z>
+     * 
+     * OUT:
+     * <list> is the list of GPSMapNode where the player can be to reach <parent> 
      */
-    private boolean addGPSNode(GPSMapNode parent, int x, int y, int z, int freeBlockAboveCount, List<GPSMapNode> list)
+    private boolean addGPSNode(GPSMapNode parent,
+                               int x,
+                               int y,
+                               int z,
+                               int parentFreeBlockAboveCount,
+                               int jumpFreeBlockAboveCount,
+                               int jumpLength,
+                               List<GPSMapNode> list)
     {
         GPSMapNode newNode = null;
         
@@ -190,29 +208,46 @@ public class GPSMap {
         if (this.debugLog) {
             Bukkit.getServer().getLogger().info("test x: " + x + " y: " + y + " z: " + z);
         }
-        if (GPSMap.canWalkOn(materials[1], materials[2], materials[3])) {
+        if (GPSMap.canWalkOn(materials[1], materials[2], materials[3])
+                && (jumpLength == 0
+                    || (jumpFreeBlockAboveCount >= 1) && GPSMap.canPassThru(materials[4]))) {
             // same level
+            // if <jumpLength> is greater than 0, we have to jump
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("    ok for y: " + y);
             }
             newNode = this.getOrCreateNode(parent, x, y, z);
         } else if (GPSMap.canWalkOn(materials[0], materials[1], materials[2])
-                && GPSMap.canPassThru(materials[3])) {
+                && GPSMap.canPassThru(materials[3])
+                && (jumpLength == 0 
+                    || (jumpFreeBlockAboveCount >= 1))) {
             // jumping one block
+            // Make sure we can jump
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("    ok for y: " + (y - 1));
             }
             newNode = this.getOrCreateNode(parent, x, y - 1, z);
-        } else if (freeBlockAboveCount >= 1
-                && GPSMap.canWalkOn(materials[2], materials[3], materials[4])) {
+        } else if (GPSMap.canWalkOn(materials[2], materials[3], materials[4])
+                    && ((jumpFreeBlockAboveCount >= 2 && GPSMap.canPassThru(materials[5]))
+                            || (jumpFreeBlockAboveCount >= 1 && jumpLength <= 1))) {
             // can fall down one block
+            // Make sure we can jump if <jumpLength> is greater than 1 (otherwise, we can just fall)
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("    ok for y: " + (y + 1));
             }
             newNode = this.getOrCreateNode(parent, x, y + 1, z);
-        } else if (freeBlockAboveCount >= 2
-                && GPSMap.canWalkOn(materials[3], materials[4], materials[5])) {
+        } else if (GPSMap.canWalkOn(materials[3], materials[4], materials[5])
+                    && ((jumpLength == 0 && parentFreeBlockAboveCount >= 2)
+                        || (jumpLength >= 1
+                            && parentFreeBlockAboveCount >= 1
+                            && jumpFreeBlockAboveCount >= 2
+                            && GPSMap.canPassThru(materials[6])))) {
+            Bukkit.getServer().getLogger().info("jump length " + jumpLength);
+            Bukkit.getServer().getLogger().info("parentFreeBlockAboveCount " + parentFreeBlockAboveCount);
+            Bukkit.getServer().getLogger().info("jumpFreeBlockAboveCount " + jumpFreeBlockAboveCount);
+            Bukkit.getServer().getLogger().info("GPSMap.canPassThru(materials[6]) " + GPSMap.canPassThru(materials[6]));
             // can fall down 2 blocks
+            // make sure we can 
             if (this.debugLog) {
                 Bukkit.getServer().getLogger().info("    ok for y: " + (y + 2));
             }
@@ -245,19 +280,21 @@ public class GPSMap {
     
     protected void tryNextBlockInDirection(GPSMapNode node, int x, int y, int z, int freeBlockAboveCount, int xDirection, int zDirection, List<GPSMapNode> childNodes)
     {
-        if (this.addGPSNode(node, x + xDirection, y, z + zDirection, freeBlockAboveCount, childNodes)) {
+        if (this.addGPSNode(node, x + xDirection, y, z + zDirection, freeBlockAboveCount, freeBlockAboveCount, 0, childNodes)) {
             // we can arrive from the next block
         } else if (canPassThru(this.world, x + xDirection, y, z + zDirection)
                     && canPassThru(this.world, x + xDirection, y + 1, z + zDirection)) {
             // if we can't arrive from the next block, maybe we can arrive from one block away
-            freeBlockAboveCount = Math.min(freeBlockAboveCount, this.countPassThruBlockAboveHead(x + xDirection, y, z + zDirection));
-            if (this.addGPSNode(node, x + xDirection * 2, y, z + zDirection * 2, freeBlockAboveCount, childNodes)) {
+            // we don't really care about the ceiling of the arrival block
+            // when the player has to jump above one blockat least  
+            int jumpFreeBlockAboveCount = this.countPassThruBlockAboveHead(x + xDirection, y, z + zDirection);
+            if (this.addGPSNode(node, x + xDirection * 2, y, z + zDirection * 2, freeBlockAboveCount, jumpFreeBlockAboveCount, 1, childNodes)) {
                 // so we can arrive from 2 blocks away
             } else if (canPassThru(this.world, x + xDirection * 2, y, z + zDirection * 2)
                         && canPassThru(this.world, x + xDirection * 2, y + 1, z + zDirection * 2)) {
                 // if we can't arrive from 2 blocks away, let's 3 blocks away
-                freeBlockAboveCount = Math.min(freeBlockAboveCount, this.countPassThruBlockAboveHead(x + xDirection * 2, y, z + zDirection * 2));
-                this.addGPSNode(node, x + xDirection * 3, y, z + zDirection * 3, freeBlockAboveCount, childNodes);
+                jumpFreeBlockAboveCount = Math.min(jumpFreeBlockAboveCount, this.countPassThruBlockAboveHead(x + xDirection * 2, y, z + zDirection * 2));
+                this.addGPSNode(node, x + xDirection * 3, y, z + zDirection * 3, freeBlockAboveCount, jumpFreeBlockAboveCount, 2, childNodes);
             }
         }
     }
