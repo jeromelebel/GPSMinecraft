@@ -51,6 +51,7 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                 } else {
                     Player playerTarget = null;
                     GPSSearch search = new GPSSearch(this.debugLog);
+                    int distance = 0;
                     
                     if (pathInfo == null) {
                         pathInfo = new GPSSearchPathInfo();
@@ -62,49 +63,54 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                     }
                     search.setFrom(player.getLocation());
                     
-                    if (args.length >= 1) {
+                    if (args.length == 0) {
+                        player.sendMessage("Il faut mettre le nom d'un joueur");
+                    } else {
                         playerTarget = Bukkit.getServer().getPlayer(args[0]);
-                        if (playerTarget == null) {
-                            player.sendMessage("Joueur inconnu");
+                        try {
+                            distance = Integer.parseInt(args[0]);
+                        } catch (Exception e) {
                         }
-                    }
-                    pathInfo.setSnowDebug(args.length >= 2 && args[1].equals("debug"));
-                    int distance = 0;
-                    
-                    try {
-                        distance = Integer.parseInt(args[0]);
-                    } catch (Exception e) {
-                    }
-                    if (playerTarget == null && args.length >= 1 && distance > 0) {
-                        Location locationTarget = player.getLocation();
-                        double yaw = (locationTarget.getYaw() + 360) % 360;
-                        
-                        if (yaw > 45 && yaw <= 135) {
-                            locationTarget.add(-distance, 0, 0);
-                        } else if (yaw > 135 && yaw <= 225) {
-                            locationTarget.add(0, 0, -distance);
-                        } else if (yaw > 225 && yaw <= 315) {
-                            locationTarget.add(distance, 0, 0);
+                        if (args.length >= 2) {
+                            pathInfo.setSnowDebug(args[1].equals("debug"));
+                        }
+                        if (playerTarget != null) {
+                            pathInfo.setPlayerUUIDTarget(playerTarget.getUniqueId());
+                            search.setTo(playerTarget.getLocation());
+                            this.getLogger().info("gps to " + playerTarget.getName());
+                        } else if (distance > 0) {
+                            Location locationTarget = player.getLocation();
+                            double yaw = (locationTarget.getYaw() + 360) % 360;
+                            
+                            if (yaw > 45 && yaw <= 135) {
+                                locationTarget.add(-distance, 0, 0);
+                            } else if (yaw > 135 && yaw <= 225) {
+                                locationTarget.add(0, 0, -distance);
+                            } else if (yaw > 225 && yaw <= 315) {
+                                locationTarget.add(distance, 0, 0);
+                            } else {
+                                locationTarget.add(0, 0, distance);
+                            }
+                            pathInfo.setLocationTarget(locationTarget);
+                            search.setTo(locationTarget);
+                            this.getLogger().info("gps to " + pathInfo.locationTarget().toString());
                         } else {
-                            locationTarget.add(0, 0, distance);
+                            player.sendMessage("Joueur inconnu");
+                            search = null;
                         }
-                        pathInfo.setLocationTarget(locationTarget);
-                        search.setTo(locationTarget);
-                        this.getLogger().info("gps to " + pathInfo.locationTarget().toString());
-                    } else {
-                        pathInfo.setPlayerUUIDTarget(playerTarget.getUniqueId());
-                        search.setTo(playerTarget.getLocation());
-                        this.getLogger().info("gps to " + playerTarget.getName());
+                        
+                        if (search != null) {
+                            pathInfo.setPath(search.search());
+                            if (pathInfo.path() == null) {
+                                player.sendMessage("Pas de chemin");
+                            } else {
+                                this.playerPaths.put(player.getUniqueId(), pathInfo);
+                                player.sendMessage("C'est parti, distance : " + (int)search.getPathDistance());
+                                this.updateCompassForPlayer(player);
+                            }
+                        }
                     }
                     
-                    pathInfo.setPath(search.search());
-                    if (pathInfo.path() == null) {
-                        player.sendMessage("Pas de chemin");
-                    } else {
-                        this.playerPaths.put(player.getUniqueId(), pathInfo);
-                        player.sendMessage("C'est parti, distance : " + (int)search.getPathDistance());
-                        this.updateCompassForPlayer(player);
-                    }
                 }
             }
             return true;
