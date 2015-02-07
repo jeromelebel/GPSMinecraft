@@ -2,11 +2,11 @@
 
 This project is a test to implement [A* algorithm](http://en.wikipedia.org/wiki/A*_search_algorithm) using Bukkit in minecraft. The direction to take will be shown with the compass. Once the player reach the destination, the compass will be set back to its previous target. The path is recomputed every 20 blocks.
 
-The algorithm take care of ladders, avoid lava and water. The distance jump limit is 2 blocks (and the algorithm checks if the ceiling is high enough to jump). The fall down limit is 2 blocks down.
+The algorithm take care of ladders, avoid lava, water and other obstacle.
 
-## Known Bugs
+## Limitation
 
-The path doesn't try to go in diagonal.
+The path doesn't try to go in diagonal. The path doesn't try to climb on vigne. The falling is limited to 2 blocks hight. The jump distance is limited to 2 block length.
 
 ## Commands
 
