@@ -242,10 +242,6 @@ public class GPSMap {
                             && parentFreeBlockAboveCount >= 1
                             && jumpFreeBlockAboveCount >= 2
                             && GPSMap.canPassThru(materials[6])))) {
-            Bukkit.getServer().getLogger().info("jump length " + jumpLength);
-            Bukkit.getServer().getLogger().info("parentFreeBlockAboveCount " + parentFreeBlockAboveCount);
-            Bukkit.getServer().getLogger().info("jumpFreeBlockAboveCount " + jumpFreeBlockAboveCount);
-            Bukkit.getServer().getLogger().info("GPSMap.canPassThru(materials[6]) " + GPSMap.canPassThru(materials[6]));
             // can fall down 2 blocks
             // make sure we can 
             if (this.debugLog) {
