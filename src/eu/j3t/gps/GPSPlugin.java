@@ -74,13 +74,16 @@ public class GPSPlugin extends JavaPlugin implements Listener {
                         pathInfo.setSnowDebug(args[1].equals("debug"));
                     }
                     if (playerTarget != null) {
+                        // save the player UUID, and let's setup <search>
                         pathInfo.setPlayerUUIDTarget(playerTarget.getUniqueId());
                         search.setTo(playerTarget.getLocation());
                         this.getLogger().info("gps to " + playerTarget.getName());
                     } else if (distance > 0) {
+                        // compute and save the location, and let's setup <search>
                         Location locationTarget = player.getLocation();
                         double yaw = (locationTarget.getYaw() + 360) % 360;
                         
+                        // compute which direction the player wants to go to
                         if (yaw > 45 && yaw <= 135) {
                             locationTarget.add(-distance, 0, 0);
                         } else if (yaw > 135 && yaw <= 225) {
